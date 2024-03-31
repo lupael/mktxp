@@ -27,11 +27,11 @@ class BaseOutputProcessor:
     OutputCapsmanEntry = namedtuple('OutputCapsmanEntry', ['dhcp_name', 'dhcp_address', 'mac_address', 'rx_signal', 'interface', 'ssid', 'tx_rate', 'rx_rate', 'uptime'])
     OutputCapsmanEntry.__new__.__defaults__ = ('',) * len(OutputCapsmanEntry._fields)
 
-    OutputWiFiEntry = namedtuple('OutputWiFiEntry', ['dhcp_name', 'dhcp_address', 'mac_address', 'signal_strength', 'signal_to_noise', 'interface', 'tx_rate', 'rx_rate', 'uptime'])
-    OutputWiFiEntry.__new__.__defaults__ = ('',) * len(OutputWiFiEntry._fields)
+    OutputWirelessEntry = namedtuple('OutputWirelessEntry', ['dhcp_name', 'dhcp_address', 'mac_address', 'signal_strength', 'signal_to_noise', 'interface', 'tx_rate', 'rx_rate', 'uptime'])
+    OutputWirelessEntry.__new__.__defaults__ = ('',) * len(OutputWirelessEntry._fields)
 
-    OutputWiFiWave2Entry = namedtuple('OutputWiFiWave2Entry', ['dhcp_name', 'dhcp_address', 'mac_address', 'signal_strength', 'interface', 'tx_rate', 'rx_rate', 'uptime'])
-    OutputWiFiWave2Entry.__new__.__defaults__ = ('',) * len(OutputWiFiWave2Entry._fields)
+    OutputWiFiEntry = namedtuple('OutputWiFiEntry', ['dhcp_name', 'dhcp_address', 'mac_address', 'signal_strength', 'interface', 'tx_rate', 'rx_rate', 'uptime'])
+    OutputWiFiEntry.__new__.__defaults__ = ('',) * len(OutputWiFiEntry._fields)
 
     OutputDHCPEntry = namedtuple('OutputDHCPEntry', ['host_name', 'server', 'mac_address', 'address', 'active_address', 'expires_after'])
     OutputDHCPEntry.__new__.__defaults__ = ('',) * len(OutputDHCPEntry._fields)
@@ -50,13 +50,10 @@ class BaseOutputProcessor:
             registration_record['rx_bytes'] = registration_record['bytes'].split(',')[1]
             del registration_record['bytes']
 
-        ww2_installed = WirelessMetricsDataSource.wifiwave2_installed(router_entry)
         if registration_record.get('tx_rate'):
-            registration_record['tx_rate'] = BaseOutputProcessor.parse_bitrates(registration_record['tx_rate']) \
-                                                if ww2_installed else BaseOutputProcessor.parse_rates(registration_record['tx_rate'])
+            registration_record['tx_rate'] = BaseOutputProcessor.parse_bitrates(registration_record['tx_rate'])
         if registration_record.get('rx_rate'):
-            registration_record['rx_rate'] = BaseOutputProcessor.parse_bitrates(registration_record['rx_rate']) \
-                                                if ww2_installed else BaseOutputProcessor.parse_rates(registration_record['rx_rate'])
+            registration_record['rx_rate'] = BaseOutputProcessor.parse_bitrates(registration_record['rx_rate'])
         if registration_record.get('uptime'):
             registration_record['uptime'] = naturaldelta(BaseOutputProcessor.parse_timedelta_seconds(registration_record['uptime']), months=True, minimum_unit='seconds')
 
@@ -100,11 +97,11 @@ class BaseOutputProcessor:
 
     @staticmethod
     def parse_rates(rate):
-        wifi_rates_rgx = config_handler.re_compiled.get('wifi_rates_rgx')
-        if not wifi_rates_rgx:
-            wifi_rates_rgx = re.compile(r'(\d*(?:\.\d*)?)([GgMmKk]bps?)')
-            config_handler.re_compiled['wifi_rates_rgx'] = wifi_rates_rgx
-        rc = wifi_rates_rgx.search(rate)
+        rates_rgx = config_handler.re_compiled.get('rates_rgx')
+        if not rates_rgx:
+            rates_rgx = re.compile(r'(\d*(?:\.\d*)?)([GgMmKk]bps?)')
+            config_handler.re_compiled['rates_rgx'] = rates_rgx
+        rc = rates_rgx.search(rate)
         return f'{int(float(rc[1]))} {rc[2]}' if rc and len(rc.groups()) == 2 else rate
 
     @staticmethod
@@ -120,7 +117,7 @@ class BaseOutputProcessor:
     def parse_timedelta(time):
         duration_interval_rgx = config_handler.re_compiled.get('duration_interval_rgx')
         if not duration_interval_rgx:
-            duration_interval_rgx = re.compile(r'((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?')
+            duration_interval_rgx = re.compile(r'((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?((?P<milliseconds>\d+)ms)?')
             config_handler.re_compiled['duration_interval_rgx'] = duration_interval_rgx                        
         time_dict = duration_interval_rgx.match(time).groupdict()
         return timedelta(**{key: int(value) for key, value in time_dict.items() if value})
@@ -128,6 +125,10 @@ class BaseOutputProcessor:
     @staticmethod
     def parse_timedelta_seconds(time):
         return BaseOutputProcessor.parse_timedelta(time).total_seconds()
+
+    @staticmethod
+    def parse_timedelta_milliseconds(time):
+        return BaseOutputProcessor.parse_timedelta(time) / timedelta(milliseconds=1)
 
     @staticmethod
     def parse_signal_strength(signal_strength):

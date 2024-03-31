@@ -36,6 +36,8 @@ from mktxp.collector.mktxp_collector import MKTXPCollector
 from mktxp.collector.user_collector import UserCollector
 from mktxp.collector.queue_collector import QueueTreeCollector
 from mktxp.collector.queue_collector import QueueSimpleCollector
+from mktxp.collector.kid_control_device_collector import KidDeviceCollector
+from mktxp.collector.bgp_collector import BGPCollector
 
 class CollectorRegistry:
     ''' MKTXP Collectors Registry
@@ -71,6 +73,10 @@ class CollectorRegistry:
         self.register(CollectorKeys.USER_COLLECTOR, UserCollector.collect)
         self.register(CollectorKeys.QUEUE_TREE_COLLECTOR, QueueTreeCollector.collect)
         self.register(CollectorKeys.QUEUE_SIMPLE_COLLECTOR, QueueSimpleCollector.collect)
+
+        self.register(CollectorKeys.KID_CONTROL_DEVICE_COLLECTOR, KidDeviceCollector.collect)
+        self.register(CollectorKeys.BGP_COLLECTOR, BGPCollector.collect)
+        
 
         self.register(CollectorKeys.MKTXP_COLLECTOR, MKTXPCollector.collect)
 
