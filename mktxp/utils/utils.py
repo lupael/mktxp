@@ -54,29 +54,22 @@ def run_cmd(cmd, shell = False, quiet = False):
         raise CmdProcessingError(output)
     return output
 
-def get_last_digit_from_shell_cmd(cmd):
-    try:
-        cmd_output = run_cmd(cmd, shell = True)
-    except CmdProcessingError as e:
-        if not quiet:
-            print ('Error while running cmd: {}'.format(e.args[0]))
-        return -1
-    else:
-        return get_last_digit(cmd_output)
-
-def get_last_digit(str_to_search):
-    p = re.compile('(\d*\.?\d+)')
-    match = p.search(str_to_search)
-    if match:
-        return float(match.group())
-    else:
-        return -1
-
 def parse_mkt_uptime(time):
     time_dict = re.match(r'((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?', time).groupdict()
     delta = timedelta(**{key: int(value) for key, value in time_dict.items() if value}).total_seconds() 
     return int(delta) if delta else 0
 
+def str2bool(str_value):
+    if not str_value or not type(str_value) is str:
+        return False
+    str_value = str_value.lower()
+    if str_value in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif str_value in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f'Invalid truth value: {str_value}')
+        
 class FSHelper:
     ''' File System ops helper
     '''
@@ -324,16 +317,13 @@ def parse_ros_version(string):
 
 def builtin_wifi_capsman_version(version):
     """Try to check if the version is Wifi version of RouterOS (>= 7.13).
-    If anything goes wrong, return None.
     Returns a boolean"""
     try:
         cur_version, _ = parse_ros_version(version)
         if cur_version >= parse('7.13'):
             return True
     except Exception as err:
-        print(f'could not get current RouterOS version, because: {str(err)}')
-        return None
-
+        print(f'could not get current RouterOS version, because: {err}')
     return False
 
 def check_for_updates(cur_version):
@@ -349,10 +339,10 @@ def check_for_updates(cur_version):
         print(f'unknown update channel {channel}')
         error = True
     except urllib.error.HTTPError as err:
-        print(f'update feed returned: {str(err)}')
+        print(f'update feed returned: {err}')
         error = True
     except Exception as err:
-        print(f'could not check for updates, because: {str(err)}')
+        print(f'could not check for updates, because: {err}')
         error = True
 
     if error:

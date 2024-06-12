@@ -20,11 +20,37 @@ TRANSLATION_TABLE = {
     'log': lambda value: '1' if value == 'true' else '0'
 }
 
-
 class FirewallMetricsDataSource:
-    ''' Firewall Metrics data provider
-    This datasource supports both IPv4 and IPv6
+    ''' Firewall Metrics data provider, supports both IPv4 and IPv6
     '''
+    @staticmethod
+    def metric_records(router_entry, *, metric_labels=None, matching_only=True, filter_path='filter', ipv6 = False):
+        if metric_labels is None:
+            metric_labels = []
+        try:
+            ip_stack = 'ipv6' if ipv6 else 'ip'
+            filter_paths = {
+                'filter': f'/{ip_stack}/firewall/filter',
+                'raw': f'/{ip_stack}/firewall/raw',
+                'nat': f'/{ip_stack}/firewall/nat',
+                'mangle': f'/{ip_stack}/firewall/mangle'
+            }
+            filter_path = filter_paths[filter_path]
+            firewall_records = FirewallMetricsDataSource._get_records(
+                router_entry,
+                filter_path,
+                {'stats': ''} if ipv6 else {'stats': '', 'all': ''},
+                matching_only=matching_only
+            )
+
+            return BaseDSProcessor.trimmed_records(router_entry, router_records=firewall_records, metric_labels=metric_labels, translation_table=TRANSLATION_TABLE)
+        except Exception as exc:
+            print(
+                f'Error getting {"IPv6" if ipv6 else "IPv4"} firewall filters info from router {router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}'
+            )
+            return None
+
+    # helpers
     @staticmethod
     def _get_records(router_entry: RouterEntry, filter_path: str, args: dict, matching_only: bool = False):
         """
@@ -38,42 +64,3 @@ class FirewallMetricsDataSource:
         if matching_only:
             firewall_records = [record for record in firewall_records if int(record.get('bytes', '0')) > 0]
         return firewall_records
-
-    @staticmethod
-    def metric_records_ipv4(router_entry, *, metric_labels=None, raw=False, matching_only=True):
-        if metric_labels is None:
-            metric_labels = []
-        try:
-            filter_path = '/ip/firewall/filter' if not raw else '/ip/firewall/raw'
-            firewall_records = FirewallMetricsDataSource._get_records(
-                router_entry,
-                filter_path,
-                {'stats': '', 'all': ''},
-                matching_only=matching_only
-            )
-
-            return BaseDSProcessor.trimmed_records(router_entry, router_records=firewall_records, metric_labels=metric_labels, translation_table=TRANSLATION_TABLE)
-        except Exception as exc:
-            print(
-                f'Error getting firewall filters info from router{router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}'
-            )
-            return None
-
-    @staticmethod
-    def metric_records_ipv6(router_entry, metric_labels=None, raw=False, matching_only=True):
-        metric_labels = metric_labels or []
-        try:
-            filter_path = '/ipv6/firewall/filter' if not raw else '/ipv6/firewall/raw'
-            firewall_records = FirewallMetricsDataSource._get_records(
-                router_entry,
-                filter_path,
-                {'stats': ''},
-                matching_only=matching_only
-            )
-
-            return BaseDSProcessor.trimmed_records(router_entry, router_records=firewall_records, metric_labels=metric_labels, translation_table=TRANSLATION_TABLE)
-        except Exception as exc:
-            print(
-                f'Error getting IPv6 firewall filters info from router{router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}'
-            )
-            return None

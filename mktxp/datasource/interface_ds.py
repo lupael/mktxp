@@ -26,7 +26,7 @@ class InterfaceTrafficMetricsDataSource:
             traffic_records = router_entry.api_connection.router_api().get_resource('/interface').get(running='yes', disabled='no')
             return BaseDSProcessor.trimmed_records(router_entry, router_records = traffic_records, metric_labels = metric_labels)
         except Exception as exc:
-            print(f'Error getting interface traffic info from router{router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}')
+            print(f'Error getting interface traffic info from router {router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}')
             return None
 
 
@@ -34,7 +34,7 @@ class InterfaceMonitorMetricsDataSource:
     ''' Interface Monitor Metrics data provider
     '''             
     @staticmethod
-    def metric_records(router_entry, *, metric_labels = None, kind = 'ethernet', include_comments = False, running_only = True):
+    def metric_records(router_entry, *, metric_labels = None, translation_table = None, kind = 'ethernet', include_comments = False, running_only = True):
         if metric_labels is None:
             metric_labels = []                
         try:
@@ -60,8 +60,8 @@ class InterfaceMonitorMetricsDataSource:
             for interface_monitor_record in interface_monitor_records:
                 if 'registered-peers' in interface_monitor_record:
                     interface_monitor_record['registered-clients'] = interface_monitor_record['registered-peers']
-            return BaseDSProcessor.trimmed_records(router_entry, router_records = interface_monitor_records, metric_labels = metric_labels)
+            return BaseDSProcessor.trimmed_records(router_entry, router_records = interface_monitor_records, metric_labels = metric_labels, translation_table=translation_table)
         except Exception as exc:
-            print(f'Error getting {kind} interface monitor info from router{router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}')
+            print(f'Error getting {kind} interface monitor info from router {router_entry.router_name}@{router_entry.config_entry.hostname}: {exc}')
             return None
 

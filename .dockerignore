@@ -3,3 +3,7 @@
 .dockerignore
 Dockerfile
 k8s
+build
+dist
+mktxp.egg-info
+tests

@@ -60,8 +60,8 @@ The default configuration file comes with a sample configuration, making it easy
 
 [default]
     # this affects configuration of all routers, unless overloaded on their specific levels
+    
     enabled = True          # turns metrics collection for this RouterOS device on / off
-
     hostname = localhost    # RouterOS IP address
     port = 8728             # RouterOS IP Port
     
@@ -71,6 +71,7 @@ The default configuration file comes with a sample configuration, making it easy
     use_ssl = False                 # enables connection via API-SSL servis
     no_ssl_certificate = False      # enables API_SSL connect without router SSL certificate
     ssl_certificate_verify = False  # turns SSL certificate verification on / off   
+    plaintext_login = True          # for legacy RouterOS versions below 6.43 use False
 
     installed_packages = True       # Installed packages
     dhcp = True                     # DHCP general metrics
@@ -79,31 +80,37 @@ The default configuration file comes with a sample configuration, making it easy
     connections = True              # IP connections metrics
     connection_stats = False        # Open IP connections metrics 
 
-    pool = True                     # Pool metrics
     interface = True                # Interfaces traffic metrics
     
+    route = True                    # IPv4 Routes metrics
+    pool = True                     # IPv4 Pool metrics
     firewall = True                 # IPv4 Firewall rules traffic metrics
+    neighbor = True                 # IPv4 Reachable Neighbors
+
+    ipv6_route = False              # IPv6 Routes metrics    
+    ipv6_pool = False               # IPv6 Pool metrics
     ipv6_firewall = False           # IPv6 Firewall rules traffic metrics
-    ipv6_neighbor = False           # Reachable IPv6 Neighbors
+    ipv6_neighbor = False           # IPv6 Reachable Neighbors
 
     poe = True                      # POE metrics
     monitor = True                  # Interface monitor metrics
     netwatch = True                 # Netwatch metrics
     public_ip = True                # Public IP metrics
-    route = True                    # Routes metrics
     wireless = True                 # WLAN general metrics
     wireless_clients = True         # WLAN clients metrics
     capsman = True                  # CAPsMAN general metrics
     capsman_clients = True          # CAPsMAN clients metrics    
 
-    kid_control_devices = False     # Kid Control metrics    
+    kid_control_assigned = False    # Allow Kid Control metrics for connected devices with assigned users
+    kid_control_dynamic = False     # Allow Kid Control metrics for all connected devices, including those without assigned user
 
     user = True                     # Active Users metrics
     queue = True                    # Queues metrics
 
     bgp = False                     # BGP sessions metrics
     
-    remote_dhcp_entry = None        # An MKTXP entry for remote DHCP info resolution (capsman/wireless)
+    remote_dhcp_entry = None        # An MKTXP entry to provide for remote DHCP info / resolution
+    remote_capsman_entry = None     # An MKTXP entry to provide for remote capsman info 
 
     use_comments_over_names = True  # when available, forces using comments over the interfaces names
 
@@ -236,7 +243,7 @@ mktxp edit -i
 
     verbose_mode = False            # Set it on for troubleshooting
 
-    fetch_routers_in_parallel = False   # Set to True if you want to fetch multiple routers in parallel
+    fetch_routers_in_parallel = False   # Fetch metrics from multiple routers in parallel / sequentially     
     max_worker_threads = 5              # Max number of worker threads that can fetch routers (parallel fetch only)
     max_scrape_duration = 10            # Max duration of individual routers' metrics collection (parallel fetch only)
     total_max_scrape_duration = 30      # Max overall duration of all metrics collection (parallel fetch only)
@@ -289,7 +296,7 @@ While most of the [mktxp options](https://github.com/akpw/mktxp#getting-started)
 ### Remote DHCP resolution
 When gathering various IP address-related metrics, MKTXP automatically resolves IP addresses whenever DHCP info is available. In many cases however, the exported devices do not have this information locally and instead rely on central DHCP servers. To improve readability / usefulness of the exported metrics, MKTXP supports remote DHCP server calls via the following option:
 ```
-remote_dhcp_entry = None        # An MKTXP entry for remote DHCP info resolution in capsman/wireless
+remote_dhcp_entry = None        # An MKTXP entry to provide for remote DHCP info / resolution
 ```
 `MKTXP entry` in this context can be any other mktxp.conf entry, and for the sole purpose of providing DHCP info it does not even need to be enabled.  An example:
 ```
@@ -298,6 +305,20 @@ remote_dhcp_entry = None        # An MKTXP entry for remote DHCP info resolution
 
 [RouterB]
     remote_dhcp_entry = RouterA  # Will resolve via RouterA
+```
+
+### Remote CAPsMAN info
+Similar to remote DHCP resolution, mktxp allows collecting CAPsMAN-related metrics via the following option: 
+```
+    remote_capsman_entry = None     # An MKTXP entry to provide for remote capsman info
+```
+`MKTXP entry` in this context can be any other mktxp.conf entry, and for the sole purpose of collecting CAPsMAN-related metrics it does not even need to be enabled.  An example:
+```
+[RouterA]
+    ...  # RouterA settings as normal
+
+[RouterB]
+    remote_capsman_entry = RouterA  # Will collect the CAPsMAN-related info via router A
 ```
 
 ### Connections stats
